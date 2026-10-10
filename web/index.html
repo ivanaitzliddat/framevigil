@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101b22">
+  <title>FrameVigil · Visual alert monitor</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <div id="auth-screen" class="auth-screen" hidden>
+    <form id="auth-form" class="auth-card">
+      <span class="auth-icon" aria-hidden="true">◎</span>
+      <p class="eyebrow">PRIVATE ACCESS</p>
+      <h2>Enter your access code</h2>
+      <p>This monitor is shared through a private network. The code is stored only in this browser tab.</p>
+      <label for="auth-input" class="field-label">ACCESS CODE</label>
+      <input id="auth-input" type="password" autocomplete="off" required>
+      <button class="button button-primary" type="submit">Open monitor</button>
+      <span id="auth-error" role="alert"></span>
+    </form>
+  </div>
+  <div class="shell">
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark" aria-hidden="true"></span><span>FRAME<span class="brand-light">/</span>VIGIL</span></div>
+      <div class="topbar-right"><span class="privacy-pill"><span class="pill-dot"></span>LOCAL SESSION</span><span id="clock" class="clock"></span></div>
+    </header>
+
+    <main>
+      <div class="intro">
+        <div><p class="eyebrow">FRAMEVIGIL / VISUAL ALERT MONITORING</p><h1>Keep an eye on every signal.</h1><p class="subtitle">Connect cameras or capture cards to the server computer, define alert terms, and let local OCR watch the feeds. Previews stay in memory briefly; frames are never written to disk.</p></div>
+        <div class="system-status"><span class="status-orb" id="status-orb"></span><div><span class="system-label">SYSTEM STATUS</span><strong id="system-state">Checking OCR…</strong></div></div>
+      </div>
+      <div id="server-offline" class="server-offline" role="alert" hidden><strong>FrameVigil is offline.</strong><span>Monitoring has stopped. Restart the Python service on the server computer; this page will reconnect automatically.</span></div>
+
+      <section class="panel host-panel" aria-labelledby="host-title">
+        <div class="panel-head"><div><p class="eyebrow">01 / SERVER INPUTS</p><h2 id="host-title">Server video sources</h2></div><div class="panel-actions"><span id="host-count" class="count">0 SOURCES</span><button id="stop-all" class="button button-outline" type="button">Stop all sources</button><button id="shutdown-server" class="button button-danger" type="button">Shut down FrameVigil</button></div></div>
+        <p class="host-intro">These are cameras and capture cards plugged into the computer running the monitor, plus a synthetic demo feed. They remain visible when you open this page from another device.</p>
+        <div id="device-attention" class="device-attention" role="status" aria-live="polite" hidden><strong>New video device needs setup</strong><span id="device-attention-list"></span><button id="configure-device" type="button" class="button button-primary">Configure device</button></div>
+        <div id="device-disconnected" class="device-attention device-disconnected" role="alert" hidden><strong>Device disconnected</strong><span id="device-disconnected-list"></span></div>
+        <div class="host-add-row">
+          <div><label for="host-device" class="field-label">AVAILABLE DEVICE</label><select id="host-device"><option value="">Checking devices…</option></select></div>
+          <div><label for="host-name" class="field-label">DISPLAY NAME</label><input id="host-name" type="text" maxlength="60" placeholder="Optional name"></div>
+          <div><label for="host-interval" class="field-label">SCAN EVERY</label><select id="host-interval"><option value="2">2 seconds</option><option value="3">3 seconds</option><option value="5" selected>5 seconds</option><option value="10">10 seconds</option><option value="30">30 seconds</option></select></div>
+          <button id="host-add" type="button" class="button button-primary">Add source</button>
+        </div>
+        <div id="host-sources" class="host-sources"><p class="host-empty">No server-side video sources configured yet.</p></div>
+      </section>
+
+      <div class="dashboard">
+        <section class="panel feed-panel" aria-labelledby="feed-title">
+          <div class="panel-head"><div><p class="eyebrow">04 / OPTIONAL BROWSER INPUT</p><h2 id="feed-title">This device's camera</h2></div><span id="capture-badge" class="badge">OFFLINE</span></div>
+          <div class="feed-frame" id="feed-frame">
+            <video id="preview" autoplay muted playsinline></video>
+            <div id="feed-placeholder" class="feed-placeholder"><span class="scan-icon" aria-hidden="true"></span><strong>No feed connected</strong><span>Choose a camera or USB video capture device to begin.</span></div>
+            <span id="live-chip" class="live-chip" hidden><span></span>LIVE</span>
+          </div>
+          <div class="feed-controls"><label for="device-select">VIDEO INPUT</label><div class="source-row"><select id="device-select"><option value="">Select a device</option></select><button id="start-button" class="button button-primary" type="button">Connect feed</button><button id="stop-button" class="button button-outline" type="button" disabled>Stop</button></div></div>
+          <p class="help">Your browser will ask permission before opening a video device. A USB HDMI capture card usually appears as a camera.</p>
+        </section>
+
+        <section class="panel rules-panel" aria-labelledby="rules-title">
+          <div class="panel-head"><div><p class="eyebrow">02 / DETECTION</p><h2 id="rules-title">Alert rules</h2></div><span id="rules-count" class="count">0 / 20</span></div>
+          <label for="rules-target" class="field-label">APPLY RULES TO</label>
+          <select id="rules-target" class="rules-target"><option value="browser">This browser's feed</option></select>
+          <label for="rules-input" class="field-label">WORDS OR PHRASES TO DETECT</label>
+          <textarea id="rules-input" spellcheck="false" placeholder="Enter one alert term per line&#10;Example: system error&#10;Example: connection lost"></textarea>
+          <div class="rule-footer"><span>Case insensitive · repeats every 15 seconds until acknowledged</span><button id="save-rules" class="button button-primary" type="button">Save rules</button></div>
+          <div id="conditions-panel" class="conditions-panel" hidden>
+            <div class="divider"></div>
+            <h3>Detailed conditions</h3>
+            <p>Alert when every keyword appears in the same OCR line. A background color can be used with keywords or on its own when OCR text is present.</p>
+            <div id="conditions-list" class="conditions-list"></div>
+            <div class="condition-grid">
+              <div><label for="condition-name" class="field-label">CONDITION NAME</label><input id="condition-name" type="text" maxlength="80" placeholder="Critical warning"></div>
+              <div><label for="condition-terms" class="field-label">KEYWORDS (COMMA SEPARATED)</label><input id="condition-terms" type="text" placeholder="system, error"></div>
+              <div class="color-setting"><label class="field-label" for="condition-color-enabled">BACKGROUND COLOR</label><div><input id="condition-color-enabled" type="checkbox"><input id="condition-color" type="color" value="#ff0000" aria-label="Expected background color"><button id="pick-color" type="button" class="button button-outline">Pick from feed</button></div></div>
+              <div><label for="condition-message" class="field-label">SPOKEN MESSAGE</label><input id="condition-message" type="text" maxlength="160" placeholder="Optional custom message"></div>
+            </div>
+            <button id="add-condition" class="button button-outline" type="button">Add condition</button>
+          </div>
+          <div class="divider"></div>
+          <div class="scan-options"><div><label for="interval-select" class="field-label">SCAN INTERVAL</label><select id="interval-select"><option value="3000">Every 3 seconds</option><option value="5000" selected>Every 5 seconds</option><option value="10000">Every 10 seconds</option></select></div><div class="toggle-wrap"><span class="field-label">AUTO SCAN</span><label class="switch"><input type="checkbox" id="auto-scan"><span class="slider"></span><span class="sr-only">Enable automatic scanning</span></label></div></div>
+          <button id="scan-button" class="button button-wide" type="button" disabled>Scan current frame</button>
+        </section>
+
+        <section class="panel events-panel" aria-labelledby="events-title">
+          <div class="panel-head"><div><p class="eyebrow">03 / ACTIVITY</p><h2 id="events-title">Recent alerts</h2></div><span id="event-count" class="count">0 EVENTS</span></div>
+          <div class="event-filters">
+            <input id="event-search" type="search" aria-label="Search alerts" placeholder="Search alerts">
+            <select id="event-source" aria-label="Filter by source"><option value="">All sources</option></select>
+            <input id="event-from" type="date" aria-label="Alerts from date">
+            <input id="event-to" type="date" aria-label="Alerts through date">
+            <select id="event-sort" aria-label="Sort alerts"><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="source">Source name</option><option value="term">Alert name</option></select>
+            <button id="event-clear" type="button" class="button button-outline">Clear</button>
+          </div>
+          <div id="events-list" class="events-list"><div class="empty-events"><span class="empty-ring" aria-hidden="true"></span><strong>All clear for now</strong><span>Detected terms will appear here as the feed is scanned.</span></div></div>
+          <div class="ack-settings"><label for="ack-duration" class="field-label">ACKNOWLEDGED MATCHES STAY QUIET FOR</label><select id="ack-duration"><option value="60">1 minute</option><option value="300">5 minutes</option><option value="900">15 minutes</option><option value="3600">1 hour</option><option value="14400">4 hours</option><option value="86400">1 day</option><option value="604800">7 days</option></select><button id="save-ack-duration" type="button" class="button button-outline">Save duration</button><button id="clear-acks" type="button" class="button button-text">Clear acknowledgements</button></div>
+          <div class="speech-controls"><label><input id="speech-enabled" type="checkbox"> Speak new alerts on this browser</label><select id="speech-rate" aria-label="Speech speed"><option value="0.8">Slow</option><option value="1" selected>Normal</option><option value="1.2">Fast</option></select></div>
+          <details class="audio-settings"><summary>Sound and voice settings</summary><div class="audio-grid">
+            <div><label for="speech-voice" class="field-label">VOICE</label><select id="speech-voice"><option value="">System default</option></select></div>
+            <div><label for="speech-volume" class="field-label">VOLUME</label><input id="speech-volume" type="range" min="0" max="100" value="80"></div>
+            <div><label for="alert-sound" class="field-label">ALERT SOUND</label><select id="alert-sound"><option value="chime">Chime</option><option value="buzzer">Buzzer</option><option value="alarm">Alarm</option><option value="none">None</option></select></div>
+            <div><label for="speech-test" class="field-label">TEST MESSAGE</label><input id="speech-test" type="text" maxlength="160" placeholder="Test alert"><button id="test-speech" type="button" class="button button-outline">Test</button></div>
+          </div><p class="help">Sound plays on the device displaying this page while the page is open.</p></details>
+          <div class="scan-meta"><span id="scan-count">0 SCANS</span><span id="last-scan">NO SCANS YET</span></div>
+        </section>
+      </div>
+      <details class="panel help-panel"><summary>Help and setup guide</summary><div class="help-content"><p>Connect a camera or HDMI capture card to the server computer. FrameVigil lists new inputs for setup and marks configured inputs when they disconnect. Rename a source, choose a scan interval, and add keywords or detailed conditions. Click an alert to inspect the detected text and its location in the captured frame, then acknowledge it to suppress that source and matching OCR sentence for the configured time.</p><p>Sources continue scanning when this browser closes. Browser camera capture and sound need this page to remain open. Stop all sources pauses server monitoring while keeping the page available. Shut down FrameVigil stops the Python service and requires a restart on the host computer. Alert images stay in server memory for up to one hour and disappear after a restart.</p></div></details>
+      <p id="notice" class="notice" role="status" aria-live="polite"></p>
+    </main>
+    <footer><span>FRAMEVIGIL / VISUAL ALERT MONITOR</span><span>FRAMES HELD BRIEFLY IN MEMORY</span></footer>
+  </div>
+  <dialog id="evidence-dialog" class="detail-dialog" aria-labelledby="evidence-title"><div class="dialog-head"><div><p class="eyebrow">ALERT EVIDENCE</p><h2 id="evidence-title">Detection details</h2></div><button id="evidence-close" type="button" class="button button-outline">Close</button></div><p id="evidence-meta" class="dialog-meta"></p><p id="evidence-line" class="detected-line"></p><div id="evidence-stage" class="evidence-stage"><img id="evidence-image" alt="" hidden><canvas id="evidence-boxes" role="img" aria-label="Captured frame with OCR detections marked in red"></canvas></div><p id="evidence-error" class="help" hidden></p><div class="ack-controls"><button id="ack-alert" type="button" class="button button-primary">Acknowledge this alert</button><button id="unack-alert" type="button" class="button button-outline" hidden>Undo acknowledgement</button><span id="ack-status" role="status"></span></div><div class="mute-controls"><label for="mute-duration" class="field-label">MUTE SOUND ON THIS BROWSER</label><select id="mute-duration"><option value="1">1 minute</option><option value="5">5 minutes</option><option value="15">15 minutes</option><option value="30">30 minutes</option><option value="60">1 hour</option><option value="120">2 hours</option><option value="180">3 hours</option><option value="360">6 hours</option><option value="1440">1 day</option></select><button id="mute-alert" type="button" class="button button-outline">Mute sound</button><button id="unmute-alert" type="button" class="button button-text" hidden>Unmute</button></div></dialog>
+  <dialog id="color-dialog" class="detail-dialog color-dialog" aria-labelledby="color-title"><div class="dialog-head"><div><p class="eyebrow">CONDITION COLOR</p><h2 id="color-title">Pick from latest frame</h2></div><button id="color-close" type="button" class="button button-outline">Close</button></div><p class="dialog-meta">Click the background near the OCR text you want to detect.</p><canvas id="color-canvas" aria-label="Latest frame; click to select a color"></canvas><p id="color-error" class="help" hidden></p></dialog>
+</body>
+</html>
