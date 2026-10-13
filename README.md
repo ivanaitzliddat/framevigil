@@ -4,7 +4,7 @@ FrameVigil is a locally hosted visual alert monitor for reading text from camera
 
 Recent preview frames stay in memory for up to 30 seconds. When an alert fires, its frame stays in memory for up to one hour, subject to a 40 MB limit, so the alert can be opened to show OCR word locations. Matched OCR lines appear in the in-memory alert history; unrelated OCR text is discarded. Frames and alert history are not written to disk. Source names, device selections, scan intervals, and rules are saved in a private local config file so they survive a restart.
 
-FrameVigil is an independent implementation with its own source code and documentation.
+FrameVigil is a public reimplementation with its own source code, documentation, and synthetic demonstration feed. It is a local evaluation prototype; hardware compatibility, detection accuracy, and deployment performance need to be measured for each setup.
 
 ## Run locally
 
@@ -44,3 +44,27 @@ The server also supports `--host 0.0.0.0` with an access token, for network setu
 ## Verify
 
 Run `python -m unittest discover -s tests -v` and `node --check web/app.js`.
+
+Release review on 13 October 2026 passed all 24 tests on Python 3.12, including the synthetic-frame tests using local Tesseract, and the JavaScript syntax check. Real camera/capture-card compatibility and production reliability are separate, unmeasured checks. The public Git history was also scanned for recognizable credential patterns with no findings; this does not establish that every possible secret format is detectable.
+
+## Future development roadmap
+
+The items below are planned work, not implemented features. They are ordered so that measured detection quality comes before additional automation. This README is the development backlog for future work.
+
+| Priority | Potential | Next deliverable | Completion evidence |
+| --- | --- | --- | --- |
+| P0 | Repeatable quality and performance evaluation | Build a labelled synthetic screen corpus with normal, warning, critical, changing-text, low-contrast, and disconnected-feed cases. Record OCR and end-to-end alert latency, missed alerts, and false alerts for the current rules. | A reproducible benchmark command, versioned aggregate results, environment/device details, and an automated test workflow. Keep screenshots synthetic and separate training/tuning cases from evaluation cases. |
+| P1 | AI recognition of alerts | Add an optional local classifier over OCR text and bounded image regions to recognize alert meaning despite wording changes. Start with an adapter that returns a category, severity suggestion, confidence, and supporting words/regions; compare it with the existing keyword/color rules. | A held-out evaluation against the P0 baseline showing per-class precision/recall, abstention rates, false alerts, missed critical alerts, and latency. Low-confidence results remain visible for operator review. |
+| P1 | Context across frames | Use a bounded sequence of observations to distinguish a new fault, repeated fault, recovery, and temporary visual change. Group matching events by source and incident while retaining access to their evidence. | Sequence tests for flicker, repeated messages, recovery, changed wording, and source disconnect/reconnect; measured changes in duplicate alerts and missed incidents. |
+| P2 | Operator feedback and personalization | Let an operator explicitly label a detection as correct, false, or uncertain. Use reviewed labels to tune source-specific recognition or thresholds, with versioned settings and rollback. An acknowledgement is not automatically a training label. | A review/export workflow using synthetic or explicitly approved data, reproducible tuning, and evaluation on untouched examples before a new model/settings version is enabled. |
+| P2 | Visual understanding beyond OCR | Experiment with local visual models for status icons, indicator colors, and structured panels where text is absent or OCR is unreliable. Evaluate each task separately before considering a general vision-language model. | Labelled image-only cases, localization evidence, task-specific error analysis, and CPU/memory/latency measurements compared with simpler visual rules. |
+| P3 | Installation and integrations | Package repeatable setup for each supported OS and add opt-in notification adapters for approved local workflows. Define credentials, retry behavior, and what alert content leaves the machine. | Documented install/uninstall and recovery checks, adapter tests with fake transports, and an explicit privacy/retention configuration. |
+
+### AI design constraints
+
+- Keep existing keyword/color rules available as an inspectable baseline. AI recognition is optional, and unavailable models must produce an explicit degraded state.
+- Treat screen content as input data. A model must never execute instructions displayed in a captured frame, change a monitored system, or silently acknowledge/suppress a critical event.
+- Start with local inference and the current bounded in-memory evidence policy. Any cloud inference or saved training examples require an explicit opt-in and a documented change to the privacy boundary.
+- Record model/version and supporting evidence for AI detections. Confidence is a model output until calibration has been measured; it is not a guarantee that an alert is correct.
+
+**Next milestone:** implement the P0 synthetic evaluation corpus and benchmark, then prototype the local recognition adapter. Continue public development with synthetic fixtures and documented evaluation results.
